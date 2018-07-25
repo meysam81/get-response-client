@@ -1,0 +1,4 @@
+package my_client_v2.sample.type;
+// messageCode = 001
+message  Type {
+}
