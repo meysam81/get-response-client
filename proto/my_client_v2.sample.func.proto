@@ -1,5 +1,6 @@
 package my_client_v2.sample.func;
 import "my_client_v2.sample.type.proto";
-// messageCode = 101
-message Call {
+// messageCode = 51
+message Func {
+    required int32 x = 1;
 }
