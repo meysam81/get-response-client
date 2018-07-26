@@ -104,7 +104,8 @@ format_status(_Opt, Status) ->
 %%%===================================================================
 get_val(Key) ->
     my_client_v2_config:get(Key).
-
+set_val(Key, Value) ->
+    my_client_v2_config:set(Key, Value).
 
 encode(Obj) ->
     my_client_v2_codec:encode_frame(Obj).
