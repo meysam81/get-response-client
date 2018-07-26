@@ -103,7 +103,7 @@ format_status(_Opt, Status) ->
 %%% Internal functions
 %%%===================================================================
 get_val(Key) ->
-    my_client_v2_utils:get(Key).
+    my_client_v2_config:get(Key).
 
 
 encode(Obj) ->

@@ -33,4 +33,4 @@ stop(_State) ->
 %% Internal functions
 %%====================================================================
 get_val(Key) ->
-    my_client_v2_utils:get(Key).
+    my_client_v2_config:get(Key).
