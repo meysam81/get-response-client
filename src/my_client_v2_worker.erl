@@ -5,7 +5,8 @@
 -include("my_client_v2.hrl").
 
 %% API
--export([start_link/0]).
+-export([start_link/0,
+         send/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -32,7 +33,7 @@ init([]) ->
 
     Host = get_val(host),
     Port = get_val(port),
-    Socket = gen_tcp:connect(Host, Port, [binary]),
+    {ok, Socket} = gen_tcp:connect(Host, Port, [binary]),
 
     State = #state{requests = maps:new(),
                    buffer = <<>>,
@@ -49,7 +50,6 @@ handle_call(_Request, _From, State) ->
 handle_cast({From, #message{tracking_id = Tracking_id} = Message},
             #state{requests = Requests,
                    socket = Socket} = State) ->
-
     {ok, Frame} = encode(Message),
 
     NewRequests = maps:put(Tracking_id, From, Requests),
@@ -73,16 +73,19 @@ handle_info({tcp, Socket, Data}, #state{socket = Socket,
 
             ClientRequest = [#client_request{message = #message{} = Msg} ||
                                 Msg <- Msgs],
+            case get_new_requests(ClientRequest, Requests) of
+                {error, bad_argument} = Error ->
+                    Error;
+                false ->
+                    false;
+                {NewClientRequest, NewRequests} ->
 
-            {NewClientRequest, NewRequests} =
-                get_new_requests(ClientRequest, Requests),
+                    [dispatch_messages(Msg) || Msg <- NewClientRequest],
 
 
-            [dispatch_messages(Msg) || Msg <- NewClientRequest],
-
-
-            {noreply, State#state{buffer = Buffered,
-                                  requests = NewRequests}};
+                    {noreply, State#state{buffer = Buffered,
+                                          requests = NewRequests}}
+            end;
         _ ->
             {noreply, State}
     end;
@@ -123,15 +126,17 @@ dispatch_messages(_) ->
     false.
 
 
-get_new_requests(#client_request{} = Msgs, Requests) ->
+get_new_requests([#client_request{}] = Msgs, Requests) ->
     get_new_requests(Msgs, Requests, 0, length(Msgs));
-get_new_requests(_, _) ->
+get_new_requests(Msgs, Requests) ->
+    ?LOG_ERROR("Messages are: ~p, and Requests are: ~p",
+               [Msgs, Requests]),
     {error, bad_argument}.
 
 get_new_requests(Msgs, Requests, Counter, Counter) ->
     {Msgs, Requests};
 get_new_requests(Msgs, Requests, Counter, N)
-  when Counter > 0, N > 0 ->
+  when Counter >= 0, N > 0 ->
     case lists:nth(Counter + 1, Msgs) of
         #client_request{message = Message} ->
 
@@ -151,3 +156,20 @@ get_new_requests(Msgs, Requests, Counter, N)
     end;
 get_new_requests(_, _, _, _) ->
     false.
+
+
+send(#message{} = Message) ->
+    Tid = get_new_tid(),
+    ToveriRef = get_val(toveri_ref),
+    {ok, WorkerPid} = toveri:get_pid(ToveriRef),
+
+    gen_server:cast(WorkerPid, {self(),
+                                Message#message{tracking_id = Tid}});
+send(_) ->
+    {error, bad_message_format}.
+
+
+get_new_tid() ->
+    Tid = get_val(message_counter),
+    set_val(message_counter, Tid + 1),
+    Tid.
