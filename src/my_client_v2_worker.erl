@@ -114,8 +114,10 @@ parse_buffer(OldBuffer, NewData) ->
     my_client_v2_codec:parse_buffer(OldBuffer, NewData).
 
 
-dispatch_messages(#message{socket_pid = Socket_pid} = Msg) ->
-    ok = gen_fsm:send_event(Socket_pid, Msg);
+dispatch_messages(#client_request{caller = Caller,
+                                  message = Message}) ->
+    Caller ! {response, Message},
+    ok;
 dispatch_messages(_) ->
     false.
 
