@@ -10,9 +10,13 @@
                   tracking_id :: integer(),
                   socket_pid :: pid(),
                   actor :: module()}).
--record(parsed_buffer, {framed, buffered}).
+-record(parsed_buffer, {framed :: list(),
+                        buffered :: binary()}).
+-record(client_request, {message :: message(),
+                         caller :: pid()}).
 
 
+-type message() :: #message{}.
 
 -define(FRAME_HEADER_BYTE_SIZE, 11).
 -define(MAX_FRAME_BYTE_SIZE, 65535).
