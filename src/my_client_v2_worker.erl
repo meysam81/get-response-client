@@ -41,7 +41,6 @@ init([]) ->
 
     {ok, State}.
 
-
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -74,10 +73,14 @@ handle_info({tcp, Socket, Data}, #state{socket = Socket,
             ClientRequest = [#client_request{message = #message{} = Msg} ||
                                 Msg <- Msgs],
             case get_new_requests(ClientRequest, Requests) of
-                {error, bad_argument} = Error ->
-                    Error;
+                {error, bad_argument} ->
+                    ?LOG_ERROR("ClientRequest: ~p, Requests: ~p",
+                               [ClientRequest, Requests]),
+                    {noreply, State};
                 false ->
-                    false;
+                    ?LOG_ERROR("ClientRequest: ~p, Requests: ~p",
+                               [ClientRequest, Requests]),
+                    {noreply, State};
                 {NewClientRequest, NewRequests} ->
 
                     [dispatch_messages(Msg) || Msg <- NewClientRequest],
@@ -107,8 +110,6 @@ format_status(_Opt, Status) ->
 %%%===================================================================
 get_val(Key) ->
     my_client_v2_config:get(Key).
-set_val(Key, Value) ->
-    my_client_v2_config:set(Key, Value).
 
 encode(Obj) ->
     my_client_v2_codec:encode_frame(Obj).
@@ -126,13 +127,8 @@ dispatch_messages(_) ->
     false.
 
 
-get_new_requests([#client_request{}] = Msgs, Requests) ->
-    get_new_requests(Msgs, Requests, 0, length(Msgs));
 get_new_requests(Msgs, Requests) ->
-    ?LOG_ERROR("Messages are: ~p, and Requests are: ~p",
-               [Msgs, Requests]),
-    {error, bad_argument}.
-
+    get_new_requests(Msgs, Requests, 0, length(Msgs)).
 get_new_requests(Msgs, Requests, Counter, Counter) ->
     {Msgs, Requests};
 get_new_requests(Msgs, Requests, Counter, N)
@@ -159,9 +155,9 @@ get_new_requests(_, _, _, _) ->
 
 
 send(#message{} = Message) ->
-    Tid = get_new_tid(),
     ToveriRef = get_val(toveri_ref),
     {ok, WorkerPid} = toveri:get_pid(ToveriRef),
+    Tid = get_new_tid(),
 
     gen_server:cast(WorkerPid, {self(),
                                 Message#message{tracking_id = Tid}});
@@ -170,6 +166,4 @@ send(_) ->
 
 
 get_new_tid() ->
-    Tid = get_val(message_counter),
-    set_val(message_counter, Tid + 1),
-    Tid.
+    my_client_v2_dict:get_new_tid().

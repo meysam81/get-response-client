@@ -4,7 +4,8 @@
 
 -export([init/0,
          get_by_code/1,
-         get_by_name/1]).
+         get_by_name/1,
+         get_new_tid/0]).
 
 -include("my_client_v2.hrl").
 
@@ -21,6 +22,14 @@ init() ->
     case ets:info(?CODE_TABLE) of
         undefined ->
             ?CODE_TABLE = ets:new(?CODE_TABLE, [named_table, public]);
+        _ ->
+            ok
+    end,
+    case ets:info(?MESSAGE_COUNTER_TABLE) of
+        undefined ->
+            ?MESSAGE_COUNTER_TABLE = ets:new(?MESSAGE_COUNTER_TABLE,
+                                             [named_table, public]),
+            ets:insert(?MESSAGE_COUNTER_TABLE, {message_counter, 1});
         _ ->
             ok
     end,
@@ -63,4 +72,15 @@ get_by_name(Name) ->
             Response;
         _ ->
             {error, undefined}
+    end.
+
+get_new_tid() ->
+    case ets:lookup(?MESSAGE_COUNTER_TABLE, message_counter) of
+        [{message_counter, Value}] ->
+            true = ets:update_element(?MESSAGE_COUNTER_TABLE, message_counter,
+                              {2, Value + 1}),
+            Value;
+        Elem ->
+            ?LOG_ERROR("failed in dictionary search: ~p", [Elem]),
+            false
     end.

@@ -1,6 +1,6 @@
 -module(my_client_v2_jactor).
 
--export([start/0, init/0]).
+-export([start/0]).
 
 -include("my_client_v2.hrl").
 -include("my_client_v2_sample_func.hrl").
@@ -8,10 +8,6 @@
 
 
 start() ->
-    _ = spawn(my_client_v2_jactor, init, []),
-    ok.
-
-init() ->
     Message = #message{object = #'my_client_v2.sample.func.Fact'{x = 5},
                        type = request,
                        flags = 2#00100000},

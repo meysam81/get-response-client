@@ -35,6 +35,7 @@
 
 -define(NAME_TABLE, name_table).
 -define(CODE_TABLE, code_table).
+-define(MESSAGE_COUNTER_TABLE, tid_table).
 
 -ifdef(TEST).
 -define(LOG_ERROR(Format, Args), ct:print(default, 50, Format, Args)).
